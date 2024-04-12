@@ -83,7 +83,7 @@ copilot_all_user_data=$(curl -s \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/orgs/$gh_org/copilot/billing/seats 2>&1)
+  https://api.github.com/orgs/$gh_org/copilot/billing/seats?per_page=100 2>&1)
 
 # Get all users that are added to CoPilot
 copilot_all_users=$(echo "$copilot_all_user_data" | jq -r '.seats[].assignee.login')
