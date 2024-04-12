@@ -30,7 +30,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Copilot License Cleanup
-      id: jira_commit_checker
+      id: cleanup_copilot_licenses
       uses: kymidd/CleanupCopilotLicenses@v1
       with:
         github-org: "your-org-name"
