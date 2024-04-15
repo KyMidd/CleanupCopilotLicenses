@@ -18,6 +18,13 @@ date_one_month_ago=$(($current_date_in_epoc - $number_of_seconds_in_a_month))
 
 
 ###
+### Reporting
+###
+removed_users=()
+removal_failures=()
+
+
+###
 ### Functions
 ###
 
@@ -57,6 +64,7 @@ hold_until_rate_limit_success() {
 remove_user_from_copilot() {
   if [[ $dry_run == "true" ]]; then
     echo "🧪 Would remove $copilot_user from CoPilot"
+    removed_users+=($copilot_user)
     return 0
   fi
   
@@ -71,9 +79,11 @@ remove_user_from_copilot() {
     # If response contains json key seats_cancelled, it worked
     if [[ $REMOVE_USER_FROM_COPILOT == *"seats_cancelled"* ]]; then
       echo "✅ User $copilot_user removed from CoPilot"
+      removed_users+=($copilot_user)
     else
       echo "❌ Failed to remove user $copilot_user from CoPilot, please investigate:"
       echo "$REMOVE_USER_FROM_COPILOT"
+      removal_failures+=($copilot_user)
     fi
 
 }
@@ -210,4 +220,29 @@ echo ""
 echo "################"
 echo "Done!"
 echo "################"
+echo
+
+if [[ $dry_run == "true" ]]; then
+  echo "The following users would have been removed from CoPilot:"
+else
+  echo "The following users were removed from CoPilot:"
+fi
+
+for user in ${removed_users[@]}; do
+  echo "  $user"
+done | sort
+
+if [[ ${#removed_users[@]} -eq 0 ]]; then
+  echo "  ** No users apply **"
+fi
+
+echo
+
+if [[ ${#removal_failures[@]} -gt 0 ]]; then
+  echo "The following users could not be removed (see above for details):"
+  for user in ${removal_failures[@]}; do
+    echo "  $user"
+  done | sort
+fi
+
 exit 0
