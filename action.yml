@@ -93,18 +93,41 @@ runs:
 
 
         ###
-        ### Fetch data to iterate over
+        ### Fetch users to iterate over
         ###
 
-        # Get all the copilot user data
-        copilot_all_user_data=$(curl -s \
+        # Get count of all seats
+        copilot_seats_total_count=$(curl -s \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer $GITHUB_TOKEN" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/orgs/$gh_org/copilot/billing/seats?per_page=100 2>&1)
+          "https://api.github.com/orgs/$gh_org/copilot/billing/seats?per_page=1" | jq -r '.total_seats' 2>&1)
+
+        # Calculate number of pages needed to get all entries
+        entries_per_page=100
+        pages_needed=$(($copilot_seats_total_count / $entries_per_page))
+        if [ $(($copilot_seats_total_count % $entries_per_page)) -gt 0 ]; then
+          pages_needed=$(($pages_needed + 1))
+        fi
+
+        # Get all entries
+        for page_number in $(seq $pages_needed); do
+          echo "Getting users page $page_number of $pages_needed"
+          
+          # Call the data on a specific page
+          paginated_entries=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/orgs/$gh_org/copilot/billing/seats?per_page=$entries_per_page&page=$page_number" 2>&1 | jq -r '.seats[]')
+              
+          # Combine all pages into one variable
+          # Extra return added since last item in list doesn't have newline (would otherwise combine two entries on one line)
+          copilot_all_user_data="${copilot_all_user_data}"$'\n'"${paginated_entries}"
+        done
 
         # Get all users that are added to CoPilot
-        copilot_all_users=$(echo "$copilot_all_user_data" | jq -r '.seats[].assignee.login')
+        copilot_all_users=$(echo "$copilot_all_user_data" | jq -r '.assignee.login')
 
 
         ###
@@ -124,7 +147,7 @@ runs:
           echo "🔍 Looking into $copilot_user"
 
           # Filter for user's data block
-          user_data=$(echo "$copilot_all_user_data" | jq -r ".seats[] | select(.assignee.login==\"$copilot_user\")")
+          user_data=$(echo "$copilot_all_user_data" | jq -r ". | select(.assignee.login==\"$copilot_user\")")
 
           # Check if already cancellation set
           pending_cancellation_date=$(echo "$user_data" | jq -r '.pending_cancellation_date')
