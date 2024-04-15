@@ -63,7 +63,7 @@ hold_until_rate_limit_success() {
 # Remove user from copilot
 remove_user_from_copilot() {
   if [[ $dry_run == "true" ]]; then
-    echo "🧪 Would remove $copilot_user from CoPilot"
+    echo "🧪 Would remove $copilot_user from Copilot"
     removed_users+=($copilot_user)
     return 0
   fi
@@ -223,9 +223,9 @@ echo "################"
 echo
 
 if [[ $dry_run == "true" ]]; then
-  echo "The following users would have been removed from CoPilot:"
+  echo "The following users would have been removed from Copilot:"
 else
-  echo "The following users were removed from CoPilot:"
+  echo "The following users were removed from Copilot:"
 fi
 
 for user in ${removed_users[@]}; do
