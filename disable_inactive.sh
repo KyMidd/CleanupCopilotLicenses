@@ -230,7 +230,7 @@ fi
 
 for user in ${removed_users[@]}; do
   echo "  $user"
-done | sort
+done | sort -f
 
 if [[ ${#removed_users[@]} -eq 0 ]]; then
   echo "  ** No users apply **"
@@ -242,7 +242,7 @@ if [[ ${#removal_failures[@]} -gt 0 ]]; then
   echo "The following users could not be removed (see above for details):"
   for user in ${removal_failures[@]}; do
     echo "  $user"
-  done | sort
+  done | sort -f
 fi
 
 exit 0
