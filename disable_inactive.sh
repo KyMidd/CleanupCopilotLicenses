@@ -3,6 +3,7 @@
 ###
 ### Set inputs
 ###
+dry_run="${{ inputs.dry-run }}"
 max_days_inactive="${{ inputs.max-days-inactive }}"
 gh_org="${{ inputs.github-org }}"
 GITHUB_TOKEN="${{ inputs.github-pat }}"
@@ -14,6 +15,13 @@ GITHUB_TOKEN="${{ inputs.github-pat }}"
 current_date_in_epoc=$(date +%s)
 number_of_seconds_in_a_month=$((60 * 60 * 24 * $max_days_inactive))
 date_one_month_ago=$(($current_date_in_epoc - $number_of_seconds_in_a_month))
+
+
+###
+### Reporting
+###
+removed_users=()
+removal_failures=()
 
 
 ###
@@ -54,6 +62,11 @@ hold_until_rate_limit_success() {
 
 # Remove user from copilot
 remove_user_from_copilot() {
+  if [[ $dry_run == "true" ]]; then
+    echo "🧪 Would remove $copilot_user from Copilot"
+    removed_users+=($copilot_user)
+    return 0
+  fi
   
   REMOVE_USER_FROM_COPILOT=$(curl -sL \
     -X DELETE \
@@ -66,9 +79,11 @@ remove_user_from_copilot() {
     # If response contains json key seats_cancelled, it worked
     if [[ $REMOVE_USER_FROM_COPILOT == *"seats_cancelled"* ]]; then
       echo "✅ User $copilot_user removed from CoPilot"
+      removed_users+=($copilot_user)
     else
       echo "❌ Failed to remove user $copilot_user from CoPilot, please investigate:"
       echo "$REMOVE_USER_FROM_COPILOT"
+      removal_failures+=($copilot_user)
     fi
 
 }
@@ -77,6 +92,10 @@ remove_user_from_copilot() {
 ###
 ### Fetch users to iterate over
 ###
+
+if [[ $dry_run == "true" ]]; then
+  echo "🧪 Dry run is enabled.  Users won't be removed"
+fi
 
 # Get count of all seats
 copilot_seats_total_count=$(curl -s \
@@ -157,7 +176,7 @@ while IFS=$'\n' read -r copilot_user; do
   last_editor=$(echo "$user_data" | jq -r '.last_activity_editor')
   echo "Last editor: $last_editor"
 
-   # Get the last active date of the user
+  # Get the last active date of the user
   last_active_date=$(echo "$user_data" | jq -r '.last_activity_at')
   echo "Last activity date at: $last_active_date"
 
@@ -201,4 +220,29 @@ echo ""
 echo "################"
 echo "Done!"
 echo "################"
+echo
+
+if [[ $dry_run == "true" ]]; then
+  echo "The following users would have been removed from Copilot:"
+else
+  echo "The following users were removed from Copilot:"
+fi
+
+for user in ${removed_users[@]}; do
+  echo "  $user"
+done | sort -f
+
+if [[ ${#removed_users[@]} -eq 0 ]]; then
+  echo "  ** No users apply **"
+fi
+
+echo
+
+if [[ ${#removal_failures[@]} -gt 0 ]]; then
+  echo "The following users could not be removed (see above for details):"
+  for user in ${removal_failures[@]}; do
+    echo "  $user"
+  done | sort -f
+fi
+
 exit 0
