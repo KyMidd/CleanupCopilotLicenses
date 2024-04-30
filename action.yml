@@ -88,7 +88,10 @@ runs:
             removed_users+=($copilot_user)
             return 0
           fi
-          
+
+          # Check rate limit blockers, hold if token bucket too low
+          hold_until_rate_limit_success
+
           REMOVE_USER_FROM_COPILOT=$(curl -sL \
             -X DELETE \
             -H "Accept: application/vnd.github+json" \
@@ -161,9 +164,6 @@ runs:
           
           # Print divider
           echo "****************************************"
-
-          # Check rate limit blockers, hold if token bucket too low
-          hold_until_rate_limit_success
 
           # Print the user we're looking at
           echo "🔍 Looking into $copilot_user"
